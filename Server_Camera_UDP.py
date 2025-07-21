@@ -1,3 +1,4 @@
+
 import socket
 import numpy
 import cv2
@@ -8,17 +9,25 @@ UDP_PORT = 9505
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 sock.bind((UDP_IP, UDP_PORT))
 
-s = b''
+s = [b'\xff' * 46080 for x in range(20)]
+
+fourcc = cv2.VideoWriter_fourcc(*'DIVX')
+out = cv2.VideoWriter('output.avi', fourcc, 25.0, (640, 480))
 
 while True:
-    data, addr = sock.recvfrom(46080)
-    s += data
+    picture = b''
 
-    if len(s) == (46080 * 20):
-        frame = numpy.fromstring(s, dtype=numpy.uint8)
+    data, addr = sock.recvfrom(46081)
+    s[data[0]] = data[1:46081]
+
+    if data[0] == 19:
+        for i in range(20):
+            picture += s[i]
+
+        frame = numpy.frombuffer(picture, dtype=numpy.uint8)
         frame = frame.reshape(480, 640, 3)
         cv2.imshow("frame", frame)
-        s = b''
+        out.write(frame)
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
             cv2.destroyAllWindows()
